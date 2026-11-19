@@ -167,7 +167,7 @@ export async function createStockOutTransaction(values: StockOutValues) {
       }
 
       // Validasi ketiadaan stok minus terlebih dahulu di dalam transaksi terkunci
-      for (const [productId, totalQty] of requestedByProduct.entries()) {
+      for (const [productId, totalQty] of Array.from(requestedByProduct.entries())) {
         const product = await tx.product.findUnique({
           where: { id: productId },
         });
