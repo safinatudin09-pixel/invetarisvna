@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  SUPER_ADMIN
+  STAFF
+  VIEWER
+}
+
+enum TransactionType {
+  IN
+  OUT
+  ADJUSTMENT
+}
+
+model User {
+  id           String        @id @default(cuid())
+  name         String
+  email        String        @unique
+  password     String
+  role         Role          @default(STAFF)
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  transactions Transaction[]
+  stockLogs    StockLog[]
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  products    Product[]
+
+  @@map("categories")
+}
+
+model Supplier {
+  id            String        @id @default(cuid())
+  name          String
+  contactPerson String?
+  phone         String?
+  address       String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  transactions  Transaction[]
+
+  @@index([name])
+  @@map("suppliers")
+}
+
+model Product {
+  id               String            @id @default(cuid())
+  sku              String            @unique
+  barcode          String?
+  name             String
+  categoryId       String
+  unit             String            @default("Pcs")
+  buyPrice         Decimal           @db.Decimal(15, 2)
+  sellPrice        Decimal           @db.Decimal(15, 2)
+  currentStock     Int               @default(0)
+  minStock         Int               @default(5)
+  imageUrl         String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  category         Category          @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  transactionItems TransactionItem[]
+  stockLogs        StockLog[]
+
+  @@index([sku])
+  @@index([barcode])
+  @@index([name])
+  @@index([categoryId])
+  @@map("products")
+}
+
+model Transaction {
+  id              String            @id @default(cuid())
+  referenceNo     String            @unique
+  type            TransactionType
+  supplierId      String?
+  destination     String?
+  userId          String
+  notes           String?
+  transactionDate DateTime          @default(now())
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  supplier        Supplier?         @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  user            User              @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items           TransactionItem[]
+
+  @@index([referenceNo])
+  @@index([type])
+  @@index([transactionDate])
+  @@index([userId])
+  @@map("transactions")
+}
+
+model TransactionItem {
+  id            String      @id @default(cuid())
+  transactionId String
+  productId     String
+  quantity      Int
+  unitPrice     Decimal     @db.Decimal(15, 2)
+
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  product       Product     @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@index([transactionId])
+  @@index([productId])
+  @@map("transaction_items")
+}
+
+model StockLog {
+  id            String          @id @default(cuid())
+  productId     String
+  userId        String
+  type          TransactionType
+  changeAmount  Int
+  previousStock Int
+  newStock      Int
+  reason        String?
+  createdAt     DateTime        @default(now())
+
+  product       Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user          User            @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([productId, createdAt])
+  @@index([userId])
+  @@index([type])
+  @@map("stock_logs")
+}
