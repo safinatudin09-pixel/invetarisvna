@@ -5,6 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { loginSchema } from "@/validations/auth.schema";
 
 export const authOptions: NextAuthOptions = {
+  secret:
+    process.env.NEXTAUTH_SECRET ||
+    "super-secret-inventory-key-change-in-production-2026",
   session: {
     strategy: "jwt",
     maxAge: 24 * 60 * 60, // 24 Jam
